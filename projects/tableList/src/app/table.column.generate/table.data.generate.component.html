@@ -1,0 +1,13 @@
+<div class="center-div">
+  <mat-card-title>Create Column</mat-card-title>
+  <ng-container>
+
+  </ng-container>
+  <mat-form-field class="input-Field" appearance="fill">
+    <label>
+      <input matInput placeholder="column name" [(ngModel)]="columnName" type="text">
+    </label>
+  </mat-form-field>
+  <button mat-button [mat-dialog-close]="{'columnName':columnName}" class="button">ensure</button>
+</div>
+

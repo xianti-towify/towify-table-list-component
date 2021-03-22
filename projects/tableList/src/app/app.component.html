@@ -1,0 +1,15 @@
+<div class="table-container">
+  <div class="table-toolbar">
+    <div class="toolbar-button" matRipple
+         (click)="showCreateColumnDialog()">
+      <div>icon</div>
+      <span>Add Column</span>
+    </div>
+  </div>
+  <div class="table">
+    <table-list-auto-width
+      [columnInfos]="defaultColumnInfos"
+      [elementData]="defaultElementData"
+    ></table-list-auto-width>
+  </div>
+</div>
