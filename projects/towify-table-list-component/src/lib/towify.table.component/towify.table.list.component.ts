@@ -17,7 +17,6 @@ import type {
   styleUrls: ['./towify.table.list.component.scss']
 })
 export class TowifyTableListComponent implements OnInit {
-
   /** 列信息数组 每个列 item 包含列的 列名称、列宽(可选) */
   @Input()
   columnInfos: ColumnInfoType[] = [];
@@ -34,23 +33,29 @@ export class TowifyTableListComponent implements OnInit {
   @Input()
   minWidth = 100;
 
-  columnsDragConfig: {[key: string]: ColumnConfigType} = {};
+  columnsDragConfig: { [key: string]: ColumnConfigType } = {};
 
   columnInfosLength = 0;
 
   displayColumns: string[] = [];
 
+  columnDragOverLayTransform = 'translate( 0px,  0px)';
+
   ngOnInit(): void {
     this.updateColumnConfig();
+    this.addColumnResizeInteractAction();
+    this.addColumnDragInteractAction();
+  }
+
+  addColumnResizeInteractAction(): void {
     let dragColumnIndex = -1;
     let dragColumnWidth = 0;
-    let dragColumnMoveX = 0;
     // 处理拖拽 修改列宽
     interact('.column-header').resizable({
       cursorChecker: () => 'ew-resize',
       edges: { left: false, right: true, bottom: false, top: false },
       listeners: {
-        start: (event) => {
+        start: event => {
           const target = event.target as HTMLElement;
           if (!target) {
             return;
@@ -60,19 +65,21 @@ export class TowifyTableListComponent implements OnInit {
             return;
           }
           // 获取拖拽列的宽度初始值
-          dragColumnIndex = this.getColumnIndexById(columnId);
+          dragColumnIndex = this.columnInfos.findIndex(
+            info => info.id === columnId
+          );
           if (dragColumnIndex !== -1) {
             dragColumnWidth = this.columnInfos[dragColumnIndex].width!;
           }
         },
-        move: (event) => {
+        move: event => {
           dragColumnWidth = this.updateColumnWidth({
             dragColumnIndex,
             dx: event.dx,
             dragColumnWidth
           });
         },
-        end: (event) => {
+        end: event => {
           dragColumnWidth = this.updateColumnWidth({
             dragColumnIndex,
             dx: event.dx,
@@ -84,11 +91,16 @@ export class TowifyTableListComponent implements OnInit {
         }
       }
     });
+  }
+
+  addColumnDragInteractAction(): void {
     // 处理拖拽 换列
+    let dragColumnIndex = -1;
+    let dragColumnMoveX = 0;
     let lastDropInIndex = -1;
     interact('.column-drag-overlay-container').draggable({
       listeners: {
-        start: (event) => {
+        start: event => {
           const target = event.target as HTMLElement;
           if (!target) {
             return;
@@ -97,35 +109,38 @@ export class TowifyTableListComponent implements OnInit {
           if (!columnId) {
             return;
           }
-          dragColumnIndex = this.getColumnIndexById(columnId);
+          dragColumnIndex = this.columnInfos.findIndex(
+            info => info.id === columnId
+          );
           this.checkDragIndex(dragColumnIndex);
         },
-        move: (event) => {
+        move: event => {
           const target = event.target as HTMLElement;
           if (!target) {
             return;
           }
           dragColumnMoveX += event.dx;
-          target.style.transform = `translate(${  dragColumnMoveX  }px, ${  0  }px)`;
-          const dropInIndex = this.findDropIndex(event.clientX, dragColumnIndex);
+          this.columnDragOverLayTransform = `translate(${dragColumnMoveX}px, ${0}px)`;
+          const dropInIndex = this.findDropIndex(
+            event.clientX,
+            dragColumnIndex
+          );
           this.checkDragIndex(dropInIndex);
           this.showDropInBox(lastDropInIndex, dropInIndex, dragColumnIndex);
           lastDropInIndex = dropInIndex;
         },
-        end: (event) => {
+        end: event => {
           const target = event.target as HTMLElement;
           if (!target) {
             return;
           }
           const dropIndex = this.findDropIndex(event.clientX, dragColumnIndex);
           this.checkDragIndex(dropIndex);
+          this.columnDragOverLayTransform = `translate(${0}px, ${0}px)`;
           if (dropIndex !== dragColumnIndex) {
             // 切换列
             moveItemInArray(this.columnInfos, dragColumnIndex, dropIndex);
             this.displayColumns = this.columnInfos.map(info => info.id);
-          } else {
-            // 如果是未换列重置移动位置到初始位置
-            target.style.transform = `translate(${  0  }px, ${  0  }px)`;
           }
           this.hideDropInBox();
           dragColumnMoveX = 0;
@@ -136,23 +151,20 @@ export class TowifyTableListComponent implements OnInit {
     });
   }
 
-  updateColumnWidth(params:{
-    dragColumnIndex: number; dx: number; dragColumnWidth: number;
+  updateColumnWidth(params: {
+    dragColumnIndex: number;
+    dx: number;
+    dragColumnWidth: number;
   }): number {
     this.checkDragIndex(params.dragColumnIndex);
-    const newWidth =  params.dragColumnWidth + params.dx;
-    if (params.dragColumnWidth >=  this.minWidth) {
+    const newWidth = params.dragColumnWidth + params.dx;
+    if (params.dragColumnWidth >= this.minWidth) {
       this.columnInfos[params.dragColumnIndex].width = newWidth;
     } else {
-      this.columnInfos[params.dragColumnIndex].width =  this.minWidth;
+      this.columnInfos[params.dragColumnIndex].width = this.minWidth;
     }
     return newWidth;
   }
-
-  getColumnIndexById(id: string): number {
-    return this.columnInfos.findIndex(info => info.id === id);
-  }
-
 
   getDisplayColumns() {
     this.updateColumnConfig();
@@ -181,21 +193,20 @@ export class TowifyTableListComponent implements OnInit {
     }
   }
 
-  onColumnClicked(event: MouseEvent): void {
+  onColumnClicked(event: MouseEvent, columnIndex: number): void {
     event.stopImmediatePropagation();
     event.stopPropagation();
-    const target = event.target  as HTMLElement;
+    const target = event.target as HTMLElement;
     if (!target) {
       return;
     }
-    const columnId = target.id.split('+').shift();
+    const columnId = this.displayColumns[columnIndex];
     if (!columnId) {
       return;
     }
     this.hideDragOverlay();
     this.columnsDragConfig[columnId].showColumnOverlayView = true;
   }
-
 
   hideDragOverlay(): void {
     const keys = Object.keys(this.columnsDragConfig);
@@ -208,7 +219,7 @@ export class TowifyTableListComponent implements OnInit {
   findDropIndex(moveOriginX: number, dragIndex: number): number {
     let dropIndex = dragIndex;
     let width = 0;
-    this.columnInfos.forEach((item, index) =>{
+    this.columnInfos.forEach((item, index) => {
       if (moveOriginX > width && moveOriginX < width + item.width!) {
         dropIndex = index;
       }
@@ -223,20 +234,25 @@ export class TowifyTableListComponent implements OnInit {
     return dropIndex;
   }
 
-  showDropInBox(lastDropInIndex: number, dropInIndex: number, dragColumnIndex: number): void {
+  showDropInBox(
+    lastDropInIndex: number,
+    dropInIndex: number,
+    dragColumnIndex: number
+  ): void {
     if (lastDropInIndex !== -1) {
-      const item = this.columnInfos[lastDropInIndex];
-      this.columnsDragConfig[item.id].showDropInBox = false;
+      this.columnsDragConfig[
+        this.columnInfos[lastDropInIndex].id
+      ].showDropInBox = false;
     }
     if (dropInIndex !== -1 && dropInIndex !== dragColumnIndex) {
-      const item = this.columnInfos[dropInIndex];
-      this.columnsDragConfig[item.id].showDropInBox = true;
+      this.columnsDragConfig[
+        this.columnInfos[dropInIndex].id
+      ].showDropInBox = true;
     }
   }
 
   hideDropInBox(): void {
-    const keys = Object.keys(this.columnsDragConfig);
-    keys.forEach(key => {
+    Object.keys(this.columnsDragConfig).forEach(key => {
       this.columnsDragConfig[key].showDropInBox = false;
     });
   }
