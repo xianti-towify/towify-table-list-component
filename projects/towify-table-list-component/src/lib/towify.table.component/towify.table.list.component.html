@@ -1,0 +1,63 @@
+<table mat-table [dataSource]="elementData" class="table-list">
+  <ng-container
+    *ngFor="let column of columnInfos; let i = index"
+    [matColumnDef]="column.id"
+  >
+    <th
+      mat-header-cell
+      class="table-header-cell"
+      *matHeaderCellDef
+      [style.width.px]="column.width"
+    >
+      <div class="column-header" id="{{ column.id }}+edge">
+        <div
+          class="column-title-container"
+          (click)="onColumnClicked($event, i)"
+        >
+          <span class="column-title"> {{ column.name }} </span>
+        </div>
+        <div
+          *ngIf="columnsDragConfig[column.id].showDropInBox"
+          [style.height.px]="elementData.length * 75"
+          [style.width.px]="column.width"
+          class="column-drag-drop-in-box"
+        >
+        </div>
+        <div
+          *ngIf="columnsDragConfig[column.id].showColumnOverlayView"
+          [style.height.px]="elementData.length * 75 + 36"
+          [style.width.px]="column.width"
+          class="column-drag-selected-box"
+        >
+        </div>
+        <div
+          *ngIf="columnsDragConfig[column.id].showColumnOverlayView"
+          [style.width.px]="column.width - 20"
+          class="column-drag-overlay-container"
+          [style.transform]="columnDragOverLayTransform"
+          id="{{ column.id }}+drag"
+        >
+          <div
+            class="column-drag-overlay-header"
+            (click)="hideDragOverlay()"
+          ></div>
+          <div
+            class="column-drag-overlay"
+            [style.height.px]="elementData.length * 75"
+          ></div>
+        </div>
+      </div>
+    </th>
+    <td
+      mat-cell
+      class="table-cell"
+      *matCellDef="let element"
+      [style.width.px]="column.width"
+      (click)="hideDragOverlay()"
+    >
+      {{ element[column.name] }}
+    </td>
+  </ng-container>
+  <tr mat-header-row *matHeaderRowDef="getDisplayColumns(); sticky: true"></tr>
+  <tr mat-row *matRowDef="let row; columns: getDisplayColumns()"></tr>
+</table>
